@@ -1,0 +1,34 @@
+{
+  "name": "learnus-mcp",
+  "version": "0.1.0",
+  "description": "MCP server that links AI agents to Yonsei LearnUS and the 전자출결 attendance portal",
+  "private": true,
+  "type": "module",
+  "bin": { "learnus-mcp": "dist/server.js" },
+  "main": "dist/server.js",
+  "files": ["dist"],
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "sync": "node dist/server.js sync",
+    "test": "tsc && node --test \"dist/**/*.test.js\""
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "@mozilla/readability": "^0.6.0",
+    "cheerio": "^1.2.0",
+    "jsdom": "^30.0.1",
+    "pdfjs-dist": "^4.10.38",
+    "playwright": "^1.62.1",
+    "turndown": "^7.2.4",
+    "turndown-plugin-gfm": "^1.0.2",
+    "zod": "^4.1.0"
+  },
+  "devDependencies": {
+    "@types/jsdom": "^30.0.0",
+    "@types/node": "^20.0.0",
+    "@types/turndown": "^5.0.6",
+    "typescript": "^5.5.0"
+  }
+}
