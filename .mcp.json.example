@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "learnus": {
+      "command": "node",
+      "args": ["/absolute/path/to/learnus-mcp/dist/server.js"]
+    }
+  }
+}

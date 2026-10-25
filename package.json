@@ -5,13 +5,14 @@
   "private": true,
   "type": "module",
   "bin": { "learnus-mcp": "dist/server.js" },
-  "main": "dist/server.js",
-  "files": ["dist"],
   "engines": { "node": ">=20" },
   "scripts": {
     "build": "tsc",
     "start": "node dist/server.js",
     "sync": "node dist/server.js sync",
+    "setup": "node dist/server.js setup",
+    "login": "node dist/server.js login",
+    "doctor": "node dist/server.js doctor",
     "test": "tsc && node --test \"dist/**/*.test.js\""
   },
   "dependencies": {

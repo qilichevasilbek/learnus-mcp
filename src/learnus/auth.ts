@@ -3,6 +3,7 @@ import type { BrowserContext } from "playwright";
 import * as config from "./config.js";
 import * as session from "./session.js";
 import { logger } from "./logger.js";
+import { readCredentials } from "../credentials.js";
 
 export async function login(context: BrowserContext): Promise<string> {
   // Try loading existing session
@@ -18,6 +19,13 @@ export async function login(context: BrowserContext): Promise<string> {
 }
 
 async function loginSSO(context: BrowserContext): Promise<string> {
+  const creds = readCredentials();
+  if (!creds) {
+    throw new Error(
+      "No Yonsei credentials found and no valid saved session. Run `node dist/server.js login` " +
+        "(or set YONSEI_ID and YONSEI_PW) and try again."
+    );
+  }
   const page = await context.newPage();
   try {
     // Navigate to LearnUs main page
@@ -43,10 +51,9 @@ async function loginSSO(context: BrowserContext): Promise<string> {
 
     // Fill in the login form
     await page.waitForSelector("#loginId", { timeout: 10000 });
-    await page.fill("#loginId", config.STUDENT_ID);
-    await page.fill("#loginPasswd", config.STUDENT_PW);
+    await page.fill("#loginId", creds.id);
+    await page.fill("#loginPasswd", creds.pw);
 
-    await page.screenshot({ path: config.LOGS_DIR + "/02-sso-filled.png", fullPage: true });
     logger.info("SSO form filled");
 
     // Submit via RSA-encrypted JS function

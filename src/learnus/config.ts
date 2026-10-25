@@ -11,8 +11,8 @@ export const LEARNUS_BASE = "https://ys.learnus.org";
  */
 export const ROLLBOOK_BASE = "https://ysrollbook.yonsei.ac.kr";
 
-export const STUDENT_ID = process.env.YONSEI_ID ?? "";
-export const STUDENT_PW = process.env.YONSEI_PW ?? "";
+// Credentials are resolved at login time by ../credentials.ts (environment,
+// then OS keystore, then a 0600 file) — never captured at module load.
 
 /**
  * Everything this server writes (session cookies, the sync cache, logs,

@@ -1,9 +1,84 @@
 # learnus-mcp
 
-An [MCP](https://modelcontextprotocol.io) server that gives AI agents real access to a Yonsei student's coursework:
-**LearnUS** (Moodle) and the **전자출결** attendance portal. Extracted from the tool layer of
-Alice, so any MCP-capable agent — Claude Code, Claude Desktop, Cline, Codex,
-Cursor — can use it.
+Give your AI agent real access to your Yonsei coursework. This is an [MCP](https://modelcontextprotocol.io) server
+for **LearnUS** and the **전자출결** attendance portal, extracted from the tool layer of the Alice assistant, so
+Claude Code, Claude Desktop, Cline, Codex and Cursor can all use it.
+
+> *"What's due this week?"* · *"How am I doing in my courses?"* · *"Can I skip tomorrow's class?"*
+
+## Quick start
+
+You need [Node.js 20+](https://nodejs.org) and a Yonsei account.
+
+```bash
+git clone https://github.com/qilichevasilbek/learnus-mcp.git
+cd learnus-mcp
+./scripts/setup.sh
+```
+
+On Windows: `npm install && npm run build && npm run setup`.
+
+The guided setup creates the folders, installs the scraper's browser, signs you in, connects Claude Code, installs
+the Claude skill and fills the cache. It asks before each step. Afterwards, restart Claude and ask a question.
+
+Something not working? `npm run doctor` checks everything and prints the fix for each problem.
+
+## Links
+
+| | |
+|---|---|
+| LearnUS | https://ys.learnus.org |
+| Attendance & timetable (전자출결) | https://ysrollbook.yonsei.ac.kr |
+| Yonsei SSO | https://infra.yonsei.ac.kr |
+
+## Signing in
+
+Pick one in setup, or run it any time:
+
+| | Command | What happens |
+|---|---|---|
+| **Save ID + password** *(recommended)* | `npm run login` | You type them (the password is hidden). They are checked against the real SSO, then saved to the **macOS Keychain** or **Linux keyring**, or a `0600` file if neither exists. The session renews itself, so the cache can refresh unattended. |
+| **Sign in by hand** | `npm run login -- --browser` | A browser window opens on LearnUS. You sign in yourself (2FA, captcha, anything) and it is detected automatically. No password is stored; the session lasts about 4 hours. |
+| **Forget everything** | `node dist/server.js logout` | Removes saved credentials and the session. |
+
+Credentials are looked up in this order: environment (`YONSEI_ID` + `YONSEI_PW`) → OS keystore → `0600` file. Use
+the environment for servers and containers with no keystore. The password is never written into an agent's config.
+
+## Connect your agent
+
+Setup registers Claude Code for you. For anything else, `node dist/server.js config` prints snippets with your real
+paths. Step-by-step Claude instructions, including the skill that teaches Claude how to use the tools, are in
+**[docs/CLAUDE_SETUP.md](docs/CLAUDE_SETUP.md)**.
+
+```bash
+claude mcp add learnus --scope user -- node /absolute/path/to/learnus-mcp/dist/server.js
+```
+
+## Folders
+
+Everything lives under one directory, `~/.learnus-mcp` (change with `LEARNUS_MCP_HOME`), created `0700`:
+
+| Folder | Contents |
+|---|---|
+| `courses/<CODE>/` | Per-course Markdown written by sync: announcements, materials, syllabus text |
+| `courses/data/` | Normalized JSON cache the tools read |
+| `state/` | Saved session cookies, the sync record, course map |
+| `logs/` | Logs and login screenshots |
+| `downloads/` | Attachments fetched by `learnus_fetch_url` |
+
+## Commands
+
+| Command | Does |
+|---|---|
+| `npm run setup` | Guided first-time setup |
+| `npm run login` | Save credentials (`--browser` to sign in by hand, `--no-verify` to skip the SSO check) |
+| `node dist/server.js logout` | Forget credentials and session |
+| `npm run sync` | Refresh the cache now (`--rediscover`, `--no-syllabus`, `--semester 20262`) |
+| `npm run doctor` | Check the installation |
+| `node dist/server.js config` | Print agent configuration snippets |
+| `node dist/server.js` | Run as an MCP server over stdio (what agents launch) |
+
+To keep the cache fresh, schedule a sync, e.g. cron: `0 */4 * * * cd /path/to/learnus-mcp && node dist/server.js sync`.
 
 ## Tools
 
@@ -21,78 +96,29 @@ Cursor — can use it.
 | `learnus_attendance` / `portal_timetable` | Official attendance and timetable from the 전자출결 portal |
 | `learnus_fetch_url` | Any page or file on a Yonsei host, as Markdown or extracted text |
 
-**Cache-first.** `learnus_sync` does one authenticated pass and writes normalized JSON and per-course Markdown; every
-other tool reads that cache in about a millisecond and only goes live on `refresh: true`. No course codes are
-hardcoded — enrollment is discovered each term.
+**Cache-first.** `learnus_sync` does one authenticated pass; every other tool reads the cache in about a millisecond
+and only goes live with `refresh: true`. No course codes are hardcoded: enrollment is discovered each term.
 
-## Setup
+## Troubleshooting
 
-```bash
-git clone <this repo> && cd learnus-mcp
-npm install
-npx playwright install chromium   # the scraper drives a headless browser
-npm run build
-```
+- **"Yonsei rejected that login"** — check the ID and password by signing in at https://ys.learnus.org, or use
+  `npm run login -- --browser`. Nothing is saved on failure.
+- **Timetable or attendance look empty** — the attendance portal drops its session before LearnUS does. Run
+  `npm run sync`, then check `learnus_last_run` for which source failed.
+- **A tool says the session expired** — with saved credentials it renews itself; otherwise run `npm run login` again.
+- **Linux, no keyring** — install `libsecret-tools` for `secret-tool`, otherwise a `0600` file is used.
+  `LEARNUS_MCP_NO_KEYSTORE=1` forces the file.
+- **Tools don't appear in Claude** — restart it, then `claude mcp list` (Claude Code) and `npm run doctor`.
 
-Credentials are read from the environment (never from a file in this repo):
+## Security & scope
 
-| Variable | Purpose |
-|----------|---------|
-| `YONSEI_ID`, `YONSEI_PW` | Yonsei SSO login |
-| `YONSEI_SEMESTER` | Optional, e.g. `20262`; otherwise derived from the date |
-| `LEARNUS_MCP_HOME` | Optional; where cache, session cookies, logs and downloads live (default `~/.learnus-mcp`) |
-
-### Claude Code
-
-```bash
-claude mcp add learnus -e YONSEI_ID=... -e YONSEI_PW=... -- node /absolute/path/to/learnus-mcp/dist/server.js
-```
-
-### Claude Desktop / Cline / Cursor (JSON config)
-
-```json
-{
-  "mcpServers": {
-    "learnus": {
-      "command": "node",
-      "args": ["/absolute/path/to/learnus-mcp/dist/server.js"],
-      "env": { "YONSEI_ID": "your-id", "YONSEI_PW": "your-password" }
-    }
-  }
-}
-```
-
-### Codex (`~/.codex/config.toml`)
-
-```toml
-[mcp_servers.learnus]
-command = "node"
-args = ["/absolute/path/to/learnus-mcp/dist/server.js"]
-env = { YONSEI_ID = "your-id", YONSEI_PW = "your-password" }
-```
-
-## Keeping the cache fresh
-
-Run a sync on a schedule so agents can answer from the cache:
-
-```bash
-node dist/server.js sync [--rediscover] [--no-syllabus] [--semester 20262]
-```
-
-Exits non-zero only on a fatal failure; a partial sync (one source down) still succeeds and says which source failed.
-
-## Notes
-
-- **Security.** Your SSO password lives in the agent's MCP config; the cached session cookies are written `0600`
-  under `LEARNUS_MCP_HOME`. `learnus_fetch_url` only sends that session to Yonsei hosts.
-- **Session expiry.** A logged-out LearnUS answers HTTP 200 with its login page. The tools detect this and report an
-  expired session rather than returning the login form as if it were content. The portal drops its cookie before
-  LearnUS does, so check `learnus_last_run` if timetable or attendance look empty.
-- **Unofficial.** This scrapes pages that have no public API and may break when LearnUS changes. Use it for your own
-  account only.
+- Your password goes to the OS keystore (or a `0600` file), never to an MCP config, argv or this repo. Session
+  cookies are `0600`. `learnus_fetch_url` only sends the Yonsei session to Yonsei hosts.
+- This scrapes pages that have no public API and can break when LearnUS changes. Use it on your own account only.
+- Login screenshots in `logs/` can show personal information; they stay on your machine.
 
 ## Development
 
 ```bash
-npm test      # builds, then runs the unit and MCP-protocol tests
+npm test      # builds, then runs unit, MCP-protocol and credential tests
 ```
