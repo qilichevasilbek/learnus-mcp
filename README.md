@@ -122,3 +122,7 @@ and only goes live with `refresh: true`. No course codes are hardcoded: enrollme
 ```bash
 npm test      # builds, then runs unit, MCP-protocol and credential tests
 ```
+
+## License
+
+[MIT](LICENSE)
