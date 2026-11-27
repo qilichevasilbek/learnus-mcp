@@ -1,11 +1,11 @@
 ---
 name: learnus
-description: Answer questions about the user's Yonsei coursework and commute — deadlines, assignments, grades, attendance, timetable, announcements, readings, syllabus, and the Sinchon–Songdo shuttle bus — using the learnus MCP tools. Use whenever the user asks what is due, how they are doing, whether they can skip a class, what an instructor posted, or when the next shuttle leaves.
+description: Answer questions about the user's Yonsei coursework and commute — deadlines, assignments, grades, attendance, timetable, announcements, readings, syllabus, the Sinchon–Songdo shuttle bus and Songdo dorm seminar rooms — using the learnus MCP tools. Use whenever the user asks what is due, how they are doing, whether they can skip a class, what an instructor posted, when the next shuttle leaves, or wants to find, book or cancel a dorm seminar room.
 ---
 
 # Using the learnus tools
 
-The `learnus` MCP server reads the user's real LearnUS and 전자출결 data. Tools are named `learnus_*` and `portal_timetable`.
+The `learnus` MCP server reads the user's real LearnUS and 전자출결 data. Tools are named `learnus_*`, `portal_timetable`, `shuttle_*` and `seminar_room_*`.
 
 ## How to work
 
@@ -21,8 +21,14 @@ The `learnus` MCP server reads the user's real LearnUS and 전자출결 data. To
      Yonsei's public notices (no login, no sync). Say which notice and period the answer came from, remind the user that
      seats are reserved on the Yonsei Portal and that public holidays aren't checked, and if no timetable covers the date
      say it isn't posted yet instead of guessing. You cannot book seats.
-4. **Never claim something does not exist** until you have checked the relevant tools and `learnus_last_run` shows that source synced. Absence from a failed or stale sync is not absence from LearnUS.
-5. **Course codes are discovered each term.** Don't assume a list; call `learnus_courses`.
+   - Songdo dorm seminar / dance / band rooms: `seminar_room_availability` to find a room, `seminar_room_my_reservations`
+     for what is booked. These are live (no sync) and only for Songdo dormitory residents.
+4. **Booking and cancelling are the user's decision.** Call `seminar_room_book` / `seminar_room_cancel` without
+   `confirm` first, show the user the preview word for word (room, date, time), and only call again with
+   `confirm: true` after they say yes in their own words. Never confirm on your own, never book "just to hold" a slot,
+   and report what the tool says the portal now shows. No same-day bookings; at most 5 days ahead and 4 hours.
+5. **Never claim something does not exist** until you have checked the relevant tools and `learnus_last_run` shows that source synced. Absence from a failed or stale sync is not absence from LearnUS.
+6. **Course codes are discovered each term.** Don't assume a list; call `learnus_courses`.
 
 ## When a tool reports an expired session
 

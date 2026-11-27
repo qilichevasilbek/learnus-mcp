@@ -56,7 +56,7 @@ export async function doctorCommand(): Promise<void> {
     fix: "Run `node dist/server.js sync` (or ask your agent to call learnus_sync).",
   });
 
-  for (const [name, url] of [["LearnUS", config.LEARNUS_BASE], ["Attendance portal", config.ROLLBOOK_BASE], ["Yonsei site (shuttle timetable)", "https://www.yonsei.ac.kr"]] as const) {
+  for (const [name, url] of [["LearnUS", config.LEARNUS_BASE], ["Attendance portal", config.ROLLBOOK_BASE], ["Yonsei site (shuttle timetable)", "https://www.yonsei.ac.kr"], ["Academic portal (dorm seminar rooms)", "https://underwood1.yonsei.ac.kr"]] as const) {
     let ok = false;
     try {
       await fetch(url, { method: "HEAD", signal: AbortSignal.timeout(8000) });
