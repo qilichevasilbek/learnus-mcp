@@ -5,9 +5,15 @@ import * as session from "./session.js";
 import { logger } from "./logger.js";
 import { readCredentials } from "../credentials.js";
 
-export async function login(context: BrowserContext): Promise<string> {
+/**
+ * Sign in to LearnUS through Yonsei SSO, reusing the saved session when it
+ * still works. `fresh` skips the saved session and logs in again — for callers
+ * whose own site (e.g. the Yonsei Portal) rejected an SSO session that LearnUS
+ * still accepts.
+ */
+export async function login(context: BrowserContext, options: { fresh?: boolean } = {}): Promise<string> {
   // Try loading existing session
-  const loaded = await session.loadCookies(context);
+  const loaded = !options.fresh && (await session.loadCookies(context));
   if (loaded && (await session.isSessionValid(context))) {
     logger.info("Using existing valid session");
     const sesskey = await session.extractSesskey(context);

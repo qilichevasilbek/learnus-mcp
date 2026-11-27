@@ -14,6 +14,10 @@ Songdo shuttle bus. Extracted from the Alice assistant's tool layer. TypeScript,
 - `src/shuttle/` — `shuttle_next` / `shuttle_timetable`. `parse.ts` reads one timetable notice, `board.ts` finds
   notices on yonsei.ac.kr and caches them, `schedule.ts` picks the notice covering a date and computes next departures.
   `src/app.ts` composes these with the LearnUS tools into the one server.
+- `src/dorm/` — `seminar_room_*` (Songdo dorm seminar / dance / band rooms on the academic portal, underwood1).
+  `wire.ts` builds the portal's eXBuilder6 form bodies, `parse.ts` reads its JSON by field name, `rules.ts` holds the
+  page's client-side booking rules, `portal.ts` is the Playwright transport, `service.ts` the four operations over an
+  injectable transport. `src/time.ts` has the Seoul clock helpers shared with the shuttle.
 - `src/extract/` — HTML → Markdown for `learnus_fetch_url`.
 - `examples/claude-skill/SKILL.md` — the skill `setup` installs for Claude.
 
@@ -32,9 +36,17 @@ Songdo shuttle bus. Extracted from the Alice assistant's tool layer. TypeScript,
   one time marked `*`) and the period text has quirks (`운행기간 : : 2026. 9. 1.`, `공휴일은 운행 없음`). Pick the notice whose
   *period* covers the date, never just the newest. A row without exactly two times is an error, not a gap. Test against
   the real HTML in `test/fixtures/` — synthetic fixtures hid both quirks.
-- "Portal" is ambiguous: `portal_timetable` is the 전자출결 site; the Yonsei Portal (`portal.yonsei.ac.kr`, where shuttle
-  seats are booked) is login-only and **not implemented** — don't write selectors for pages that haven't been inspected
-  while signed in.
+- "Portal" is ambiguous: `portal_timetable` is the 전자출결 site. The Yonsei Portal (`portal.yonsei.ac.kr`) opens the
+  academic system on `underwood1.yonsei.ac.kr`, its own SSO client (`haksaYonsei`) on the same `infra.yonsei.ac.kr`
+  SSO as LearnUS; `src/dorm/` reaches it via `SSOLegacy.do?pname=spLogin`. Shuttle seat booking there is **not
+  implemented**. Don't write calls for pages that haven't been inspected while signed in.
+- **underwood1 answers HTTP 200 when signed out** — JSON `_METADATA_.success:false, msg P000000-0096`, or an HTML page
+  alerting "SSO 인증정보가 없습니다" that then navigates to `SSOLegacy.do?pname=spLogout` (blocked in `portal.ts`: it
+  would end the SSO session LearnUS uses too). Every call carries `_menuId`/`_pgmId` derived from the menu's ids; wrong
+  ids give `P000000-0020`.
+- **Seminar-room writes are gated.** `seminar_room_book`/`_cancel` do nothing but preview without `confirm: true`;
+  writes are sent once (no retry) and reported from a fresh read of the reservation list. Only Songdo (`sdom`,
+  program sdombk0200) is implemented; Sinchon (`ndom`, ndomap2400) is a different program that hasn't been inspected.
 - The attendance portal (`ysrollbook`) is authoritative for timetable and attendance; its cookie lapses before LearnUS's.
 
 ## Commands

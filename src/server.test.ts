@@ -20,6 +20,10 @@ const EXPECTED = [
   "portal_timetable",
   "shuttle_next",
   "shuttle_timetable",
+  "seminar_room_availability",
+  "seminar_room_my_reservations",
+  "seminar_room_book",
+  "seminar_room_cancel",
 ];
 
 async function connect() {
@@ -31,7 +35,7 @@ async function connect() {
   return { client, server };
 }
 
-test("an MCP client sees all fifteen tools with schemas", async () => {
+test("an MCP client sees all nineteen tools with schemas", async () => {
   const { client, server } = await connect();
   const { tools } = await client.listTools();
   assert.deepEqual(tools.map((t) => t.name).sort(), [...EXPECTED].sort());
