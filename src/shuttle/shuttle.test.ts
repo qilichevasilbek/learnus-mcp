@@ -71,6 +71,13 @@ test("the notice's service period, rules and route are read", () => {
   assert.match(t.via ?? "", /영종대교/);
 });
 
+test("the trip time is read only from a duration statement", () => {
+  const withNote = (note: string) => synthetic("2026. 9. 1.(화) ~ 2026. 12. 21.(월)", [["8:00", "8:10"]]).replace("</table>", `</table><p>${note}</p>`);
+  assert.equal(parseNotice(withNote("★ 운행시간은 약 1시간 30분 정도 소요됩니다."), meta).tripMinutes, 90);
+  assert.equal(parseNotice(withNote("예약 1시간 전까지 취소해 주세요."), meta).tripMinutes, null, "예약 is not 약");
+  assert.equal(parseNotice(SEMESTER, meta).tripMinutes, null, "the real notice states none");
+});
+
 test("accessible vehicles are flagged", () => {
   const t = parseNotice(SEMESTER, meta);
   const dep = t.fromSinchon.find((d) => d.time === "07:20")!;

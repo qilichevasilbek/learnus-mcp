@@ -120,7 +120,9 @@ export function parseNotice(
   fromSinchon.sort(byTime);
   fromSongdo.sort(byTime);
 
-  const trip = text.match(/약\s*(\d+)\s*시간\s*(?:(\d+)\s*분)?/);
+  // "약 1시간 30분 정도 소요" — anchored on 소요 and not preceded by a Hangul syllable, so
+  // "예약 1시간 전에 취소" (cancel 1 hour before booking) is not read as a trip time.
+  const trip = text.match(/(?<![가-힣])약\s*(\d+)\s*시간(?:\s*(\d+)\s*분)?[^.※]{0,12}소요/);
   return {
     noticeId: meta.id,
     title: meta.title,
