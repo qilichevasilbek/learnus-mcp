@@ -301,7 +301,8 @@ export interface Reservation {
 }
 
 const isoDate = (where: string, yyyymmdd: string) => {
-  const m = yyyymmdd.match(/^(\d{4})(\d{2})(\d{2})$/) ?? yyyymmdd.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  // The reservation list sends a timestamp, 20261128000000; accept the bare date and ISO too.
+  const m = yyyymmdd.match(/^(\d{4})(\d{2})(\d{2})(?:\d{6})?$/) ?? yyyymmdd.match(/^(\d{4})-(\d{2})-(\d{2})$/);
   if (!m) throw new SeminarRoomError("layout", `Expected a date like 20261128 from ${where}; got "${yyyymmdd}".`);
   return `${m[1]}-${m[2]}-${m[3]}`;
 };

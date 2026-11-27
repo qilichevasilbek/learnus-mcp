@@ -103,7 +103,7 @@ To keep the cache fresh, schedule a sync, e.g. cron: `0 */4 * * * cd /path/to/le
 | `shuttle_next` | When the next Sinchon ⇄ Songdo shuttle leaves, in Seoul time, skipping weekends |
 | `shuttle_timetable` | The full timetable for a date — the semester or vacation notice whose period covers it |
 | `seminar_room_availability` | Free and taken hours of the Songdo dorm seminar rooms and dance/band rooms, for a date or several days |
-| `seminar_room_my_reservations` | Your seminar-room reservations: date, room, hours, status (applied / approved / cancelled / rejected) |
+| `seminar_room_my_reservations` | Your seminar-room reservations: date, room, hours, status (applied / approved / rejected); cancelled ones drop off the list |
 | `seminar_room_book` | Book a room — previews unless called with `confirm: true` |
 | `seminar_room_cancel` | Cancel a reservation — previews unless called with `confirm: true` |
 
@@ -131,10 +131,12 @@ then shows, not what the request said it would do.
 Rules, as the reservation page applies them:
 
 - no same-day booking; at most **5 days ahead**
-- one-hour slots (HH:00–HH:50) within the room's hours (09:00–24:00 for every room seen)
+- one-hour slots (HH:00–HH:50) within each room's own hours (seminar rooms 09:00–24:00; band room B138 09:00–22:00)
 - at most **4 hours** per booking, and no more people than the room holds (8, 10 or 15)
 - event name, group name, event kind (lecture, exam, camp, meeting, seminar, other) and the number of people are required
-- a reservation can be cancelled until its date; rooms seen so far are approved immediately (승인)
+- a reservation can be cancelled until its date, and then drops off the list; rooms seen so far are approved
+  immediately (승인)
+- the room details list a minimum number of people, but neither the page nor the server enforced it in testing
 
 These come from the page's own script; whether the server checks them too was not tested, so the tool enforces them
 itself. Any further limit the portal has is passed on in its own words. The **Sinchon dormitories** (기숙사(신촌) →

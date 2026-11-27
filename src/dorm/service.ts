@@ -343,7 +343,21 @@ export class SeminarRooms {
     );
     const result = parseWriteResult("the booking (saveSemrmResveAplyList)", await this.deps.transport.post(ENDPOINTS.book, body));
 
-    const after = await this.reservations();
+    // The request is out: from here on, a failed read must not read as "not booked".
+    let after: Reservation[];
+    try {
+      after = await this.reservations();
+    } catch (err) {
+      return {
+        submitted: true,
+        text: [
+          "The booking was sent and the portal accepted it" + (result.message ? ` (${result.message})` : "") + ", but reading the reservation list afterwards failed:",
+          err instanceof Error ? err.message : String(err),
+          "Check seminar_room_my_reservations or the page before booking again — do not resend.",
+          ...summary,
+        ].join("\n"),
+      };
+    }
     const added = after.filter((r) => !before.has(r.number) && r.date === input.date && r.roomCode === room.code);
     if (!added.length) {
       return {
@@ -390,7 +404,16 @@ export class SeminarRooms {
     const result = parseWriteResult("the cancellation (saveSemrmResveAplyCancel)", await this.deps.transport.post(ENDPOINTS.cancel, encodeArgs(MENU, { semrmResveNo: number })));
     const now: Reservation | Error = await this.detail(number).catch((err: unknown) => (err instanceof Error ? err : new Error(String(err))));
     if (now instanceof Error) {
-      const listed = (await this.reservations()).some((x) => x.number === number);
+      // The portal drops a cancelled reservation entirely, so the lookup by number comes back empty.
+      let listed: boolean;
+      try {
+        listed = (await this.reservations()).some((x) => x.number === number);
+      } catch (err) {
+        return {
+          submitted: true,
+          text: `The cancellation of #${number} was sent and the portal accepted it, but reading the reservation list afterwards failed (${err instanceof Error ? err.message : String(err)}). Check seminar_room_my_reservations before trying again — do not resend.`,
+        };
+      }
       return {
         submitted: true,
         text: listed

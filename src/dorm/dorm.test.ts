@@ -90,6 +90,24 @@ test("page set-up: eligible with a student number, or an empty list when not eli
   assert.deepEqual(P.parseInit(fx("init-not-eligible.json")), { eligible: false, campus: null, studentNo: null });
 });
 
+test("a real reservation row: timestamp date, times, status", () => {
+  const [r] = P.parseReservations(fx("reservations-one.json"));
+  assert.deepEqual(r, {
+    number: "G000000001",
+    date: "2026-11-28",
+    roomCode: "C0102",
+    roomName: "중세미나실 C0102",
+    eventName: "Booking test",
+    groupName: "Personal",
+    eventKind: "60",
+    people: 1,
+    status: "30",
+    rejectReason: null,
+    times: ["10:00–10:50"],
+  });
+  assert.deepEqual(P.parseWriteResult("the booking", fx("write-ok.json")), { message: null });
+});
+
 test("an empty reservation list is a real answer, not an error", () => {
   assert.deepEqual(P.parseReservations(fx("reservations-empty.json")), []);
 });
@@ -203,7 +221,7 @@ function fakePortal(opts: { reservations?: () => string; detail?: (no: string) =
         if (no) return opts.detail ? opts.detail(no) : fx("reservations-empty.json");
         return opts.reservations ? opts.reservations() : fx("reservations-empty.json");
       }
-      if (WRITE_ENDPOINTS.includes(p)) return opts.write ? opts.write() : '{"_METADATA_":{"success":true}}';
+      if (WRITE_ENDPOINTS.includes(p)) return opts.write ? opts.write() : fx("write-ok.json");
       throw new Error(`unexpected path ${p}`);
     },
     async reset(o?: { fresh?: boolean }) {
@@ -251,14 +269,12 @@ test("a rule violation is refused before any portal write, even with confirm", a
   assert.equal(portal.writes().length, 0);
 });
 
-// The reservation-list row below is shaped from the page's declared columns
-// (dsSdom450H); replace it with a sanitized live capture once one exists.
-const listRow = (no: string, status = "30", times?: string) =>
-  JSON.stringify({
-    dsSdom450: [
-      { semrmResveNo: no, stuno: "0000000000", resveDt: "20261128", campsDivCd: "G", semrmCd: "C0102", semrmNm: "중세미나실 C0102", evntNm: "Study group", evntPrgrsGrpNm: "UIC study", evntKindDivCd: "50", evntPcnt: 3, imdtlAprvlYn: "1", aplySttusDivCd: status, returResnCtnt: null, ...(times ? { useBeginTimeDivCd: times } : {}) },
-    ],
-  });
+// The real list row (sanitized) from the live book-then-cancel test, re-numbered and re-stated per test.
+const listRow = (no: string, status = "30", times = "10:00 ~ 10:50") => {
+  const d = JSON.parse(fx("reservations-one.json"));
+  Object.assign(d.dsSdom450[0], { semrmResveNo: no, aplySttusDivCd: status, useBeginTimeDivCd: times });
+  return JSON.stringify(d);
+};
 
 test("with confirm, the booking is sent once and the answer is what the portal then lists", async () => {
   let booked = false;
@@ -267,7 +283,7 @@ test("with confirm, the booking is sent once and the answer is what the portal t
     detail: (no) => listRow(no, "30", "10:00 ~ 10:50, 11:00 ~ 11:50"),
     write: () => {
       booked = true;
-      return '{"_METADATA_":{"success":true}}';
+      return fx("write-ok.json");
     },
   });
   const svc = new SeminarRooms({ transport: portal.transport, now: NOW });
@@ -282,6 +298,21 @@ test("with confirm, the booking is sent once and the answer is what the portal t
   assert.match(r.text, /^Booked\. The portal now lists:\n#777 · 2026-11-28 \(Sat\) · 중세미나실 C0102/);
   assert.match(r.text, /time: 10:00–10:50, 11:00–11:50/);
   assert.match(r.text, /승인 \(approved\)/);
+});
+
+test("if reading the list fails after the submit, the answer still says it was sent", async () => {
+  let booked = false;
+  const portal = fakePortal({
+    reservations: () => (booked ? "<html>maintenance</html>" : fx("reservations-empty.json")),
+    write: () => {
+      booked = true;
+      return fx("write-ok.json");
+    },
+  });
+  const r = await new SeminarRooms({ transport: portal.transport, now: NOW }).book({ ...BOOK, confirm: true });
+  assert.equal(r.submitted, true);
+  assert.equal(portal.writes().length, 1);
+  assert.match(r.text, /was sent and the portal accepted it.*\n.*maintenance[\s\S]*do not resend/);
 });
 
 test("if the portal accepts but does not list the booking, the answer says so", async () => {
@@ -313,26 +344,72 @@ test("seminar_room_cancel without confirm never calls the cancel endpoint", asyn
   assert.equal(portal.writes().length, 0);
 });
 
-test("cancel with confirm sends the number once and reports the portal's new status", async () => {
+test("cancel with confirm sends the number once; the reservation then vanishes, as observed live", async () => {
   let cancelled = false;
   const portal = fakePortal({
-    detail: (no) => listRow(no, cancelled ? "90" : "30"),
+    // Live: after a cancel the lookup by number returns no rows, and the list no longer has it.
+    detail: (no) => (cancelled ? fx("reservations-empty.json") : listRow(no)),
     write: () => {
       cancelled = true;
-      return '{"_METADATA_":{"success":true}}';
+      return fx("write-ok.json");
     },
   });
   const r = await new SeminarRooms({ transport: portal.transport, now: NOW }).cancel({ number: "#777", confirm: true });
   assert.equal(portal.writes().length, 1);
   assert.equal(portal.writes()[0].path, ENDPOINTS.cancel);
   assert.match(decodeURIComponent(portal.writes()[0].body), /^semrmResveNo=777&_menuId=/);
-  assert.match(r.text, /^Cancelled\. The portal now shows:/);
-  assert.match(r.text, /취소 \(cancelled\)/);
+  assert.equal(r.text, "Cancelled. Reservation #777 no longer appears in the portal's list.");
+});
+
+test("a cancelled status, if the portal ever reports one, is shown as such", async () => {
+  let cancelled = false;
+  const portal = fakePortal({
+    detail: (no) => listRow(no, cancelled ? "90" : "30"),
+    write: () => {
+      cancelled = true;
+      return fx("write-ok.json");
+    },
+  });
+  const r = await new SeminarRooms({ transport: portal.transport, now: NOW }).cancel({ number: "777", confirm: true });
+  assert.match(r.text, /^Cancelled\. The portal now shows:[\s\S]*취소 \(cancelled\)/);
+});
+
+test("the cancel tool passes confirm through: preview without it, one cancel with it", async () => {
+  let cancelled = false;
+  const portal = fakePortal({
+    detail: (no) => (cancelled ? fx("reservations-empty.json") : listRow(no)),
+    write: () => {
+      cancelled = true;
+      return fx("write-ok.json");
+    },
+  });
+  const cancel = seminarRoomTools({ transport: portal.transport, now: NOW }).find((t) => t.name === "seminar_room_cancel")!;
+  assert.match((await cancel.handler({ reservation_number: "777" })).content[0].text, /^PREVIEW/);
+  assert.equal(portal.writes().length, 0);
+  assert.match((await cancel.handler({ reservation_number: "777", confirm: true })).content[0].text, /^Cancelled/);
+  assert.equal(portal.writes().length, 1);
+});
+
+test("the book tool sends exactly one booking with confirm: true", async () => {
+  let booked = false;
+  const portal = fakePortal({
+    reservations: () => (booked ? listRow("777") : fx("reservations-empty.json")),
+    detail: (no) => listRow(no),
+    write: () => {
+      booked = true;
+      return fx("write-ok.json");
+    },
+  });
+  const book = seminarRoomTools({ transport: portal.transport, now: NOW }).find((t) => t.name === "seminar_room_book")!;
+  const res = await book.handler({ date: "2026-11-28", room: "C0102", start: "10:00", end: "11:00", event_name: "Study", group_name: "Me", event_kind: "other", attendees: 1, confirm: true });
+  assert.match(res.content[0].text, /^Booked\./);
+  assert.equal(portal.writes().length, 1);
+  assert.doesNotMatch(res.content[0].text, /0000000000/);
 });
 
 test("cancelling what cannot be cancelled is refused without a write", async () => {
   const svc = (status: string, date = "20261128") =>
-    new SeminarRooms({ transport: fakePortal({ detail: (no) => listRow(no, status).replace("20261128", date) }).transport, now: NOW });
+    new SeminarRooms({ transport: fakePortal({ detail: (no) => listRow(no, status).replace("20261128000000", date + "000000") }).transport, now: NOW });
   await assert.rejects(svc("90").cancel({ number: "1", confirm: true }), invalid(/already cancelled/));
   await assert.rejects(svc("99").cancel({ number: "1", confirm: true }), invalid(/rejected/));
   await assert.rejects(svc("30", "20261120").cancel({ number: "1", confirm: true }), invalid(/has passed/));

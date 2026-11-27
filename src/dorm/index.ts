@@ -43,7 +43,7 @@ const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "YYYY-MM-DD");
 const time = z.string().regex(/^\d{1,2}:\d{2}$/, "HH:MM");
 
 const RULES = `Rules the page applies (Songdo): no same-day booking; at most 5 days ahead; one-hour
-slots (HH:00–HH:50) within each room's hours (09:00–24:00 for the rooms seen); at most 4 hours per
+slots (HH:00–HH:50) within each room's own hours (seminar rooms 09:00–24:00, band room B138 09:00–22:00); at most 4 hours per
 booking (and the room's own maximum); attendees no more than the room's capacity; event name,
 group name, event kind and attendee count are required. A reservation can be cancelled while its
 date is today or later. Any further limit (per day/week, penalties) is the portal's to enforce:
@@ -94,14 +94,14 @@ ${RULES}`,
     tool(
       "seminar_room_my_reservations",
       `The user's Songdo dormitory seminar/practice-room reservations from the Yonsei Portal:
-date, room, booked hours, status (신청 applied, 승인 approved, 배정 assigned, 취소 cancelled,
-반려 rejected with the reason), event and group. Read-only. Each has a reservation number, which
+date, room, booked hours, status (신청 applied, 승인 approved, 배정 assigned,
+반려 rejected with the reason; a cancelled reservation disappears from the list), event and group. Read-only. Each has a reservation number, which
 seminar_room_cancel takes.
 
 Use this when: the user asks what they have booked, whether a booking was approved, or wants to
 cancel one.`,
       {
-        include_past: z.boolean().optional().describe("Also list reservations whose date has passed (default false)."),
+        include_past: z.boolean().optional().describe("Also list reservations whose date has passed, if the portal returns any (default false; not yet observed)."),
         limit: z.number().int().min(1).max(50).optional().describe("At most this many (default 15)."),
       },
       async (args) => {
