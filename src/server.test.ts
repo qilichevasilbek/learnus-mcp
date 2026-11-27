@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
-import { createLearnusServer } from "./learnus/index.js";
+import { createServer } from "./app.js";
 
 const EXPECTED = [
   "learnus_sync",
@@ -18,18 +18,20 @@ const EXPECTED = [
   "learnus_syllabus",
   "learnus_attendance",
   "portal_timetable",
+  "shuttle_next",
+  "shuttle_timetable",
 ];
 
 async function connect() {
   const [clientSide, serverSide] = InMemoryTransport.createLinkedPair();
-  const server = createLearnusServer();
+  const server = createServer();
   await server.connect(serverSide);
   const client = new Client({ name: "test", version: "0.0.0" });
   await client.connect(clientSide);
   return { client, server };
 }
 
-test("an MCP client sees all thirteen tools with schemas", async () => {
+test("an MCP client sees all fifteen tools with schemas", async () => {
   const { client, server } = await connect();
   const { tools } = await client.listTools();
   assert.deepEqual(tools.map((t) => t.name).sort(), [...EXPECTED].sort());

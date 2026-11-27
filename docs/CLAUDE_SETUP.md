@@ -61,7 +61,7 @@ Prefer a single always-on instruction instead of a skill? Paste the body of that
 
 ## 4. Try it
 
-Ask Claude: *"What's due this week?"*, *"How am I doing in my courses?"*, *"Can I skip tomorrow's class?"*
+Ask Claude: *"What's due this week?"*, *"How am I doing in my courses?"*, *"Can I skip tomorrow's class?"*, *"When's the next shuttle to Songdo?"*
 
 ## Staying signed in
 

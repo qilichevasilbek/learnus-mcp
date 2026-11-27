@@ -37,8 +37,8 @@ async function main(): Promise<void> {
 
   switch (command) {
     case undefined: {
-      const { createLearnusServer } = await import("./learnus/index.js");
-      await createLearnusServer().connect(new StdioServerTransport());
+      const { createServer } = await import("./app.js");
+      await createServer().connect(new StdioServerTransport());
       return;
     }
     case "sync": {

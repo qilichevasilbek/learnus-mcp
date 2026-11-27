@@ -1,6 +1,6 @@
 ---
 name: learnus
-description: Answer questions about the user's Yonsei coursework — deadlines, assignments, grades, attendance, timetable, announcements, readings, syllabus — using the learnus MCP tools. Use whenever the user asks what is due, how they are doing, whether they can skip a class, or what an instructor posted.
+description: Answer questions about the user's Yonsei coursework and commute — deadlines, assignments, grades, attendance, timetable, announcements, readings, syllabus, and the Sinchon–Songdo shuttle bus — using the learnus MCP tools. Use whenever the user asks what is due, how they are doing, whether they can skip a class, what an instructor posted, or when the next shuttle leaves.
 ---
 
 # Using the learnus tools
@@ -17,6 +17,10 @@ The `learnus` MCP server reads the user's real LearnUS and 전자출결 data. To
    - Attendance and the official timetable: `learnus_attendance` and `portal_timetable` — the 전자출결 portal is authoritative, not LearnUS.
    - Readings: `learnus_materials` includes links instructors paste into section text, not just uploaded files.
    - A specific page or attachment on a Yonsei host: `learnus_fetch_url`.
+   - The inter-campus shuttle: `shuttle_next` for "when can I leave" and `shuttle_timetable` for a whole day. These read
+     Yonsei's public notices (no login, no sync). Say which notice and period the answer came from, remind the user that
+     seats are reserved on the Yonsei Portal and that public holidays aren't checked, and if no timetable covers the date
+     say it isn't posted yet instead of guessing. You cannot book seats.
 4. **Never claim something does not exist** until you have checked the relevant tools and `learnus_last_run` shows that source synced. Absence from a failed or stale sync is not absence from LearnUS.
 5. **Course codes are discovered each term.** Don't assume a list; call `learnus_courses`.
 

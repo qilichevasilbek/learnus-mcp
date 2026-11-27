@@ -2,7 +2,7 @@
   "name": "learnus-mcp",
   "version": "0.1.0",
   "license": "MIT",
-  "description": "MCP server that links AI agents to Yonsei LearnUS and the 전자출결 attendance portal",
+  "description": "MCP server that links AI agents to Yonsei LearnUS, the 전자출결 attendance portal and the Sinchon–Songdo shuttle bus",
   "private": true,
   "type": "module",
   "bin": { "learnus-mcp": "dist/server.js" },

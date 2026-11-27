@@ -1,10 +1,11 @@
 # learnus-mcp
 
-Give your AI agent real access to your Yonsei coursework. This is an [MCP](https://modelcontextprotocol.io) server
-for **LearnUS** and the **전자출결** attendance portal, extracted from the tool layer of the Alice assistant, so
-Claude Code, Claude Desktop, Cline, Codex and Cursor can all use it.
+Give your AI agent real access to your Yonsei life. This is an [MCP](https://modelcontextprotocol.io) server for
+**LearnUS**, the **전자출결** attendance portal and the **Sinchon ⇄ Songdo shuttle bus**, extracted from the tool layer
+of the Alice assistant, so Claude Code, Claude Desktop, Cline, Codex and Cursor can all use it.
 
-> *"What's due this week?"* · *"How am I doing in my courses?"* · *"Can I skip tomorrow's class?"*
+> *"What's due this week?"* · *"How am I doing in my courses?"* · *"Can I skip tomorrow's class?"* ·
+> *"When's the next shuttle to Songdo?"*
 
 ## Quick start
 
@@ -30,6 +31,8 @@ Something not working? `npm run doctor` checks everything and prints the fix for
 | LearnUS | https://ys.learnus.org |
 | Attendance & timetable (전자출결) | https://ysrollbook.yonsei.ac.kr |
 | Yonsei SSO | https://infra.yonsei.ac.kr |
+| Shuttle timetable notices | https://www.yonsei.ac.kr/bbs/sc/58/artclList.do |
+| Shuttle seat reservation | https://portal.yonsei.ac.kr → IT서비스 → 국제캠퍼스 셔틀버스 예약 |
 
 ## Signing in
 
@@ -95,9 +98,17 @@ To keep the cache fresh, schedule a sync, e.g. cron: `0 */4 * * * cd /path/to/le
 | `learnus_syllabus` | Syllabus / schedule documents as text |
 | `learnus_attendance` / `portal_timetable` | Official attendance and timetable from the 전자출결 portal |
 | `learnus_fetch_url` | Any page or file on a Yonsei host, as Markdown or extracted text |
+| `shuttle_next` | When the next Sinchon ⇄ Songdo shuttle leaves, in Seoul time, skipping weekends |
+| `shuttle_timetable` | The full timetable for a date — the semester or vacation notice whose period covers it |
 
 **Cache-first.** `learnus_sync` does one authenticated pass; every other tool reads the cache in about a millisecond
 and only goes live with `refresh: true`. No course codes are hardcoded: enrollment is discovered each term.
+
+**The shuttle tools need no login, no browser and no credentials.** They read Yonsei's own timetable notices on
+yonsei.ac.kr, choose the one whose stated service period covers the date (the vacation timetable is posted days before
+the semester one ends), and cite it in every answer. They cannot see public holidays, they do not book seats (that is on
+the Yonsei Portal, behind your login), and when no timetable covers a date they say so rather than guess. If Yonsei is
+unreachable they serve their last cached copy, labelled as stale.
 
 ## Troubleshooting
 
@@ -108,12 +119,15 @@ and only goes live with `refresh: true`. No course codes are hardcoded: enrollme
 - **A tool says the session expired** — with saved credentials it renews itself; otherwise run `npm run login` again.
 - **Linux, no keyring** — install `libsecret-tools` for `secret-tool`, otherwise a `0600` file is used.
   `LEARNUS_MCP_NO_KEYSTORE=1` forces the file.
+- **"No published shuttle timetable covers …"** — Yonsei hasn't posted the next semester or vacation timetable yet.
+  The tool names the latest one it found; check the board linked above.
 - **Tools don't appear in Claude** — restart it, then `claude mcp list` (Claude Code) and `npm run doctor`.
 
 ## Security & scope
 
 - Your password goes to the OS keystore (or a `0600` file), never to an MCP config, argv or this repo. Session
   cookies are `0600`. `learnus_fetch_url` only sends the Yonsei session to Yonsei hosts.
+- The shuttle tools only read public pages on yonsei.ac.kr.
 - This scrapes pages that have no public API and can break when LearnUS changes. Use it on your own account only.
 - Login screenshots in `logs/` can show personal information; they stay on your machine.
 

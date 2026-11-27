@@ -15,7 +15,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { z } from "zod";
-import { createMcpServer, tool } from "../mcp.js";
+import { createMcpServer, tool, type ToolDefinition } from "../mcp.js";
 import * as browser from "./browser.js";
 import { login } from "./auth.js";
 import { MoodleAPI } from "./moodle-api.js";
@@ -303,7 +303,7 @@ function renderGrades(courses: CourseGrades[]): string {
 
 /* ------------------------------------------------------------------ server --- */
 
-export function createLearnusServer() {
+export function createLearnusServer(extraTools: ToolDefinition<any>[] = []) {
   return createMcpServer({
     name: "learnus-tools",
     version: "2.1.0",
@@ -990,6 +990,8 @@ tools instead.`,
           return textResult("No sync has run yet. Call learnus_sync to populate the cache.");
         }
       ),
+
+      ...extraTools,
     ],
   });
 }
